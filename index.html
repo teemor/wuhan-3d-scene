@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>江城武汉 · 两江三镇 · Three.js 真实场景</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden;
+    font-family: "PingFang SC", "Microsoft YaHei", system-ui, sans-serif; }
+  #app { position: fixed; inset: 0; }
+  .card {
+    position: fixed; top: 18px; left: 18px; padding: 13px 18px;
+    background: rgba(255, 255, 255, .74); backdrop-filter: blur(10px);
+    border-radius: 14px; box-shadow: 0 6px 24px rgba(0, 0, 0, .16);
+    user-select: none; z-index: 10; max-width: 300px;
+  }
+  .card h1 { font-size: 17px; color: #2f3a2f; margin-bottom: 5px; }
+  .card p  { font-size: 12.5px; color: #57644f; line-height: 1.75; }
+  .card p.sub { color: #8b8574; font-size: 11.5px; }
+  #toolbar {
+    position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%);
+    display: flex; gap: 10px; z-index: 10; flex-wrap: wrap; justify-content: center;
+  }
+  #toolbar button {
+    padding: 10px 20px; font-size: 14px; letter-spacing: 1px; color: #fff;
+    background: linear-gradient(135deg, #3a4a8c, #5a6fd6); border: none;
+    border-radius: 999px; cursor: pointer; box-shadow: 0 8px 22px rgba(58, 74, 140, .4);
+    transition: transform .15s, box-shadow .15s;
+  }
+  #toolbar button:hover { transform: translateY(-2px); box-shadow: 0 12px 26px rgba(58, 74, 140, .5); }
+  #toolbar button.alt { background: linear-gradient(135deg, #55624a, #7a8a64); }
+  #info {
+    position: fixed; top: 18px; right: 18px; width: 300px; padding: 16px 18px;
+    background: rgba(255, 255, 255, .82); backdrop-filter: blur(12px);
+    border-radius: 14px; box-shadow: 0 8px 28px rgba(0, 0, 0, .2);
+    z-index: 20; display: none;
+  }
+  #info h2 { font-size: 16px; color: #2f3a2f; margin-bottom: 8px; }
+  #info p { font-size: 13px; color: #4a4a42; line-height: 1.9; }
+  #infoClose {
+    position: absolute; top: 10px; right: 12px; border: none; background: none;
+    font-size: 16px; cursor: pointer; color: #888;
+  }
+  .tag {
+    padding: 4px 12px; background: rgba(20, 28, 40, .68); color: #fff;
+    border-radius: 999px; font-size: 12.5px; letter-spacing: 1px;
+    cursor: pointer; pointer-events: auto; white-space: nowrap;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, .3);
+    transition: background .15s; transform: translate(-50%, -50%);
+  }
+  .tag:hover { background: rgba(212, 164, 60, .85); }
+  .river-tag {
+    padding: 2px 10px; color: #eef6fc; font-size: 12px; letter-spacing: 6px;
+    background: rgba(24, 52, 82, .38); border-radius: 6px; white-space: nowrap;
+    pointer-events: none; text-shadow: 0 1px 3px rgba(0, 20, 40, .6);
+  }
+  #timeBar {
+    z-index: 11;
+    position: fixed; right: 16px; top: 14px; transform: none;
+    display: flex; align-items: center; gap: 10px; z-index: 12;
+    background: rgba(16,24,40,.66); padding: 7px 14px; border-radius: 999px;
+    backdrop-filter: blur(8px);
+  }
+  #timeLabel { color: #ffd98a; font-size: 15px; font-variant-numeric: tabular-nums; min-width: 44px; text-align: center; }
+  #timeSlider { width: 220px; accent-color: #ffd98a; cursor: pointer; }
+  #autoBtn {
+    border: none; background: rgba(255,217,138,.18); color: #ffd98a;
+    border-radius: 999px; padding: 5px 12px; font-size: 13px; cursor: pointer;
+  }
+  #miniMap {
+    position: fixed; right: 16px; bottom: 16px; z-index: 12;
+    border-radius: 10px; box-shadow: 0 4px 16px rgba(0,0,0,.35);
+    pointer-events: none; opacity: .92;
+  }
+  #loading {
+    position: fixed; inset: 0; z-index: 40; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 14px;
+    background: linear-gradient(160deg, #0a1526 0%, #14304a 55%, #2a5a74 100%);
+  }
+  .loadTitle { color: #ffe9c0; font-size: 34px; letter-spacing: 12px; font-weight: 600; }
+  .loadSub { color: rgba(255,233,192,.55); font-size: 13px; letter-spacing: 4px; }
+  #loadBarWrap {
+    width: 320px; height: 6px; border-radius: 3px; overflow: hidden;
+    background: rgba(255,255,255,.14); margin-top: 10px;
+  }
+  #loadBar { height: 100%; width: 0%; background: linear-gradient(90deg, #ffd98a, #ff9a5a); transition: width .3s; }
+  #loadText { color: rgba(255,233,192,.75); font-size: 13px; }
+  
+  #err {
+    position: fixed; inset: 0; display: none; place-items: center;
+    color: #a33; font-size: 14px; background: #fdfbf7; z-index: 99;
+    padding: 30px; text-align: center; line-height: 2; white-space: pre-line;
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<div class="card">
+  <h1>🌉 江城武汉 · 两江三镇</h1>
+  <p>左键拖拽旋转 · 滚轮缩放 · 右键平移<br>点击地标标签查看介绍 · 底部切换机位与昼夜</p>
+  <p class="sub">建筑/水系/路网来自 OpenStreetMap 真实数据（ODbL），黄鹤楼、长江大桥等为程序化手工建模</p>
+</div>
+
+<div id="toolbar">
+  <button data-cam="overview">🏞 全景</button>
+  <button data-cam="tower">🏯 黄鹤楼</button>
+  <button data-cam="bridge">🌉 长江大桥</button>
+  <button data-cam="parrot">🚡 鹦鹉洲</button>
+  <button data-cam="cruise">🚢 夜游长江</button>
+  <button id="fwBtn" class="alt">🎆 烟花</button>
+  <button id="sndBtn" class="alt">🔇 音效</button>
+  <button id="qBtn">🎞 均衡</button>
+  <button id="tourBtn">🎥 空中巡游</button>
+  <button id="shotBtn" class="alt">📸 截图</button>
+  <button id="walkBtn" class="alt">🚶 街景漫游</button>
+</div>
+
+<div id="timeBar">
+  <span id="timeLabel">08:00</span>
+  <input id="timeSlider" type="range" min="0" max="1439" value="480">
+  <button id="autoBtn">🕐 自动</button>
+</div>
+
+<div id="info">
+  <button id="infoClose">✕</button>
+  <h2 id="infoTitle"></h2>
+  <p id="infoDesc"></p>
+</div>
+
+<canvas id="miniMap" width="210" height="140"></canvas>
+<div id="walkHint" style="display:none;position:fixed;top:18px;left:50%;transform:translateX(-50%);padding:9px 22px;background:rgba(20,28,40,.82);color:#fff;border-radius:999px;font-size:14px;letter-spacing:1px;z-index:15;">WASD 移动 · 拖拽转视角 · Shift 疾跑 · Esc 退出</div>
+<div id="loading">
+  <div class="loadTitle">江城武汉</div>
+  <div class="loadSub">两江三镇 · 东湖绿道 · 龟蛇锁大江</div>
+  <div id="loadBarWrap"><div id="loadBar"></div></div>
+  <div id="loadText">加载中…</div>
+</div>
+<div id="err"></div>
+
+<!-- 模块加载失败（如直接双击 file:// 打开）时的提示 -->
+<script>
+  setTimeout(function () {
+    if (!window.__booted) {
+      var e = document.getElementById('err');
+      e.style.display = 'grid';
+      e.textContent = '页面加载失败\n请在本目录启动本地服务器后访问，例如：\npython -m http.server 8223\n（浏览器不允许 file:// 直接加载 ES 模块；大数据量首次构建约需 1-2 分钟）';
+    }
+  }, 600000);
+</script>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "./lib/three.module.js",
+    "three/addons/": "./lib/"
+  }
+}
+</script>
+<script type="module">
+  window.addEventListener('error', e => {
+    const el = document.getElementById('err');
+    if (el && !window.__booted) {
+      el.style.display = 'grid';
+      el.textContent = '模块加载错误：' + (e.message || '') + '
+' + String(e.filename || '').split('/').pop() + ':' + (e.lineno || '');
+    }
+  });
+  window.addEventListener('unhandledrejection', e => {
+    const el = document.getElementById('err');
+    if (el && !window.__booted) {
+      el.style.display = 'grid';
+      el.textContent = '加载异常：' + String(e.reason || '').slice(0, 300);
+    }
+  });
+  </script>
+  <script type="module" src="js/main.js?v=103"></script>
+</body>
+</html>
